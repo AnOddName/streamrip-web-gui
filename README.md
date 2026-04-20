@@ -49,7 +49,7 @@ Follow the [Streamrip configuration guide](https://github.com/nathom/streamrip/w
 ### Option 1: Pre-built workflow. 
 1: Add this to your `docker-compose.yml`
 
-```
+```yaml
   streamrip:
     image: anoddname/streamrip-web-gui:latest 
     container_name: streamrip-web
@@ -60,6 +60,7 @@ Follow the [Streamrip configuration guide](https://github.com/nathom/streamrip/w
       - STREAMRIP_CONFIG=/config/streamrip/config.toml
       - DOWNLOAD_DIR=/music
       - MAX_CONCURRENT_DOWNLOADS=1
+      # - STREAMRIP_USERS=user1,user2,user3 # optional: a list of users to separate downloads by user (e.g. DOWNLOAD_DIR/user1/)
     volumes:
       - /home/YOURUSERNAME/.config/streamrip:/config/streamrip:rw
       - /home/YOURUSERNAME/media-server/data/Music:/music:rw
@@ -93,6 +94,7 @@ services:
           - STREAMRIP_CONFIG=/config/streamrip/config.toml
           - DOWNLOAD_DIR=/music
           - MAX_CONCURRENT_DOWNLOADS=2
+          # - STREAMRIP_USERS=user1,user2,user3 # optional: a list of users to separate downloads by user (e.g. DOWNLOAD_DIR/user1/)
         volumes:
           - /home/YOURUSERNAME/.config/streamrip:/config/streamrip:rw
           - /home/YOURUSERNAME/media-server/data/Music:/music:rw

@@ -33,6 +33,12 @@ function initializeSSE() {
 }
 
 function handleSSEMessage(data) {
+    const user = getCurrentUser();
+    
+    // Filter by user if user filtering is enabled
+    if (user && data.user && data.user !== user) {
+        return;
+    }
     
     switch(data.type) {
         case 'download_started':
@@ -261,12 +267,20 @@ function switchTab(tab, element) {
 async function startDownload() {
     const url = document.getElementById('urlInput').value.trim();
     const quality = document.getElementById('qualitySelect').value;
+    const user = getCurrentUser();
     
     if (!url) {
         alert('Please enter a URL');
         return;
     }
     
+    // Prepare payload
+    const payload = { url, quality: parseInt(quality) };
+
+    if (user) {
+        payload['user'] = user;
+    }
+
     const btn = document.getElementById('downloadBtn');
     btn.disabled = true;
     
@@ -274,7 +288,7 @@ async function startDownload() {
         const response = await fetch('/api/download', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url, quality: parseInt(quality) })
+            body: JSON.stringify(payload)
         });
         
         const data = await response.json();
@@ -325,8 +339,11 @@ async function saveConfig() {
 }
 
 async function loadFiles() {
+    const user = getCurrentUser();
+    
     try {
-        const response = await fetch('/api/browse');
+        const url = user ? `/api/browse?user=${encodeURIComponent(user)}` : '/api/browse';
+        const response = await fetch(url);
         const files = await response.json();
         
         const container = document.getElementById('fileList');
@@ -481,6 +498,7 @@ function displayCurrentPage() {
     updatePaginationControls();
     loadAlbumArtForVisibleItems();
 }
+
 function updatePaginationControls() {
     const totalPages = Math.ceil(totalResults / itemsPerPage);
     document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
@@ -601,8 +619,10 @@ async function loadAlbumArtForVisibleItems() {
         }
     }
 }
+
 async function downloadFromUrl(url) {
     const quality = document.getElementById('qualitySelect').value;
+    const user = getCurrentUser();
     
     const searchResults = document.querySelectorAll('.search-result-item');
     let metadata = {};
@@ -626,15 +646,21 @@ async function downloadFromUrl(url) {
     
     switchTab('active');
     
+    const payload = {
+        url: url,
+        quality: parseInt(quality),
+        ...metadata
+    };
+
+    if (user) {
+        payload['user'] = user;
+    }
+    
     try {
         const response = await fetch('/api/download-from-url', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                url: url,
-                quality: parseInt(quality),
-                ...metadata
-            })
+            body: JSON.stringify(payload)
         });
         
         const data = await response.json();
@@ -648,6 +674,10 @@ async function downloadFromUrl(url) {
     }
 }
 
+function getCurrentUser() {
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    return pathParts.length > 0 ? pathParts[0] : null;
+}
 
 window.addEventListener('load', () => {
     initializeSSE();

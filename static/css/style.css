@@ -838,3 +838,39 @@ button:disabled {
         padding: 10px;
     }
 }
+
+/* User List Styles */
+.user-list {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    padding: 25px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+
+.user-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.user-list li {
+    margin-bottom: 15px;
+}
+
+.user-list a {
+    display: inline-block;
+    padding: 10px 15px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    text-decoration: none;
+    color: var(--text-primary);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.user-list a:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--accent);
+}

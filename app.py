@@ -23,6 +23,7 @@ app = Flask(__name__)
 STREAMRIP_CONFIG = os.environ.get('STREAMRIP_CONFIG', '/config/config.toml') 
 DOWNLOAD_DIR = os.environ.get('DOWNLOAD_DIR', '/music') 
 MAX_CONCURRENT_DOWNLOADS = int(os.environ.get('MAX_CONCURRENT_DOWNLOADS', '2')) 
+STREAMRIP_USERS = os.environ.get("STREAMRIP_USERS")
 
 download_queue = queue.Queue()
 active_downloads = {}
@@ -30,6 +31,10 @@ download_history = []
 sse_clients = []
 album_art_cache = {}
 cache_lock = threading.Lock()
+if STREAMRIP_USERS:
+    USERS = [user.strip() for user in STREAMRIP_USERS.split(",") if user.strip()]
+else:
+    USERS = []
          
 class DownloadWorker(threading.Thread):
     def __init__(self):
@@ -46,19 +51,23 @@ class DownloadWorker(threading.Thread):
             url = task['url']
             quality = task.get('quality', 3)
             metadata = task.get('metadata', {})
+            download_dir = task.get("directory", DOWNLOAD_DIR)
+            user = task.get('user')
             
             active_downloads[task_id] = {
                 'status': 'downloading',
                 'url': url,
                 'metadata': metadata,
-                'started': time.time()
+                'started': time.time(),
+                'user': user
             }
             
             broadcast_sse({
                 'type': 'download_started',
                 'id': task_id,
                 'metadata': metadata,
-                'status': 'downloading'
+                'status': 'downloading',
+                'user': user
             })
             
             output_lines = []
@@ -68,7 +77,7 @@ class DownloadWorker(threading.Thread):
                 cmd = ['rip']
                 if os.path.exists(STREAMRIP_CONFIG):
                     cmd.extend(['--config-path', STREAMRIP_CONFIG])
-                cmd.extend(['-f', DOWNLOAD_DIR])
+                cmd.extend(['-f', download_dir])
                 cmd.extend(['-q', str(quality)])
                 cmd.extend(['url', url])
 
@@ -103,7 +112,8 @@ class DownloadWorker(threading.Thread):
                     'id': task_id,
                     'status': 'completed' if process.returncode == 0 else 'failed',
                     'metadata': metadata,
-                    'output': "\n".join(output_lines)
+                    'output': "\n".join(output_lines),
+                    'user': user
 
                 })
                             
@@ -112,7 +122,8 @@ class DownloadWorker(threading.Thread):
                     'type': 'download_error',
                     'id': task_id,
                     'error': str(e),
-                    'output': "\n".join(output_lines) if output_lines else str(e)
+                    'output': "\n".join(output_lines) if output_lines else str(e),
+                    'user': user
                 })
             
             finally:
@@ -170,15 +181,37 @@ for _ in range(MAX_CONCURRENT_DOWNLOADS):
     worker.start()
     workers.append(worker)
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+def create_user_routes(app, users):
+    for user in users:
+        route_path = f"/{user}/"
+
+        def user_route(user=user):
+            return render_template("index.html", user=user)
+
+        # Use a unique endpoint name for each route
+        endpoint_name = f"user_{user}"
+        app.route(route_path, endpoint=endpoint_name)(user_route)
+
+
+if USERS:
+
+    @app.route("/")
+    def user_list_page():
+        return render_template("users.html", users=USERS)
+
+    create_user_routes(app, USERS)
+else:
+    
+    @app.route('/')
+    def index():
+        return render_template('index.html', user=None)
 
 @app.route('/api/download', methods=['POST'])
 def start_download():
     data = request.json
     url = data.get('url')
     quality = data.get('quality', 3)
+    user = data.get("user")
     
     if not url:
         return jsonify({'error': 'URL is required'}), 400
@@ -189,6 +222,19 @@ def start_download():
     if not any(service in url.lower() for service in valid_services):
         return jsonify({'error': 'Unsupported service URL'}), 400
     
+    if USERS:
+        if not user or user not in USERS:
+            return jsonify({'error': 'Unauthorized or missing user'}), 403
+        directory = os.path.join(DOWNLOAD_DIR, user)
+    else:
+        directory = DOWNLOAD_DIR
+
+    if not os.path.exists(directory):
+        try:
+            os.makedirs(directory, exist_ok=True)
+        except Exception as e:
+            return jsonify({"error": f"Failed to create directory: {e}"}), 500
+    
     metadata = extract_metadata_from_url(url)
     
     task_id = f"dl_{int(time.time() * 1000)}"
@@ -196,7 +242,9 @@ def start_download():
         'id': task_id,
         'url': url,
         'quality': quality,
-        'metadata': metadata 
+        'metadata': metadata,
+        "directory": directory,
+        "user": user,
     }
     
     download_queue.put(task)
@@ -206,9 +254,18 @@ def start_download():
 
 @app.route('/api/status')
 def get_all_status():
+    user = request.args.get('user')
+    
+    filtered_active = active_downloads
+    filtered_history = download_history[-20:]
+    
+    if USERS and user:
+        filtered_active = {k: v for k, v in active_downloads.items() if v.get('user') == user}
+        filtered_history = [h for h in download_history[-20:] if h.get('user') == user]
+    
     return jsonify({
-        'active': active_downloads,
-        'history': download_history[-20:],
+        'active': filtered_active,
+        'history': filtered_history,
         'queue_size': download_queue.qsize()
     })
 
@@ -540,13 +597,21 @@ def get_album_art():
 
 @app.route('/api/browse')
 def browse_downloads():
+    user = request.args.get('user')
+    if USERS:
+        if not user or user not in USERS:
+            return jsonify({'error': 'Unauthorized or missing user'}), 403
+        search_dir = os.path.join(DOWNLOAD_DIR, user)
+    else:
+        search_dir = DOWNLOAD_DIR
+
     try:
         files = []
-        for root, dirs, filenames in os.walk(DOWNLOAD_DIR):
+        for root, dirs, filenames in os.walk(search_dir):
             for filename in filenames:
                 if filename.endswith(('.mp3', '.flac', '.m4a', '.opus')):
                     filepath = os.path.join(root, filename)
-                    rel_path = os.path.relpath(filepath, DOWNLOAD_DIR)
+                    rel_path = os.path.relpath(filepath, search_dir)
                     files.append({
                         'name': rel_path,
                         'size': os.path.getsize(filepath),
@@ -802,6 +867,7 @@ def download_from_url():
     data = request.json
     url = data.get('url')
     quality = data.get('quality', 3)
+    user = data.get("user")
     
     title = data.get('title')
     artist = data.get('artist')
@@ -810,6 +876,19 @@ def download_from_url():
     
     if not url:
         return jsonify({'error': 'URL required'}), 400
+    
+    if USERS:
+        if not user or user not in USERS:
+            return jsonify({'error': 'Unauthorized or missing user'}), 403
+        directory = os.path.join(DOWNLOAD_DIR, user)
+    else:
+        directory = DOWNLOAD_DIR
+
+    if not os.path.exists(directory):
+        try:
+            os.makedirs(directory, exist_ok=True)
+        except Exception as e:
+            return jsonify({"error": f"Failed to create directory: {e}"}), 500
     
     if title and artist and service:
         metadata = {
@@ -826,7 +905,9 @@ def download_from_url():
         'id': task_id,
         'url': url,
         'quality': quality,
-        'metadata': metadata
+        'metadata': metadata,
+        "directory": directory,
+        "user": user,
     }
     
     download_queue.put(task)

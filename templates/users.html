@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Streamrip Web</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+	<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>STREAMRIP WEB</h1>
+            <p class="subtitle">WEB GUI FOR STREAMRIP</p>
+        </div>
+        
+        <!-- User Section-->
+        <div class="section">
+            <div class="section-header">
+                <h2>Users</h2>
+                <div class="divider"></div>
+            </div>
+            {% if users %}
+                <div class="user-list">
+                    <ul>
+                        {% for user in users %}
+                            <li><a href="/{{ user }}/">{{ user }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% else %}
+                <p>No users available.</p>
+            {% endif %}
+        </div>
+        
+    </div>
+</body>
+</html>

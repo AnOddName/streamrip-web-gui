@@ -39,4 +39,4 @@ USER 1000:1000
 EXPOSE 5000
 
 # Run with aggressive worker recycling
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--worker-class", "gevent", "--workers", "2", "--timeout", "60", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--worker-class", "gevent", "--workers", "1", "--timeout", "60", "app:app"]

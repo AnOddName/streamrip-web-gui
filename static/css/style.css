@@ -18,6 +18,7 @@
     --success: #00ff88;
     --error: #ff3333;
     --warning: #ffaa00;
+    --info: #00bbff;
 }
 
 body {
@@ -194,6 +195,10 @@ button:disabled {
 
 .download-item.failed {
     border-left: 3px solid var(--error);
+}
+
+.download-item.skipped {
+    border-left: 3px solid var(--info);
 }
 
 .download-content {
@@ -373,9 +378,14 @@ button:disabled {
     border-color: var(--success);
 }
 
-.status-badge.failed { 
+.status-badge.failed {
     color: var(--error);
     border-color: var(--error);
+}
+
+.status-badge.skipped {
+    color: var(--info);
+    border-color: var(--info);
 }
 
 .config-editor {
@@ -824,17 +834,167 @@ button:disabled {
     .error-state {
         padding: 15px;
     }
-    
+
     .error-title {
         font-size: 16px;
     }
-    
+
     .error-message {
         font-size: 13px;
     }
-    
+
     .error-traceback pre {
         font-size: 10px;
         padding: 10px;
+    }
+}
+
+/* ===== Responsive layout ===== */
+
+/* Wide desktop: use the vertical space instead of fixed 500px panes */
+@media (min-width: 1200px) {
+    .search-results {
+        max-height: 65vh;
+    }
+
+    .file-list {
+        max-height: 60vh;
+    }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    body {
+        padding: 12px;
+        /* keep content clear of notches/home bar in standalone PWA mode */
+        padding-left: calc(12px + env(safe-area-inset-left));
+        padding-right: calc(12px + env(safe-area-inset-right));
+        padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    }
+
+    .header {
+        padding: 20px 0;
+        margin-bottom: 20px;
+    }
+
+    h1 {
+        font-size: 26px;
+        letter-spacing: 4px;
+    }
+
+    .subtitle {
+        font-size: 11px;
+    }
+
+    .section {
+        padding: 16px;
+        margin-bottom: 15px;
+    }
+
+    /* Stack the URL bar: input, quality, button each full width */
+    .input-group {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .input-group select {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .input-group button {
+        width: 100%;
+        padding: 14px 24px;
+    }
+
+    /* Prevent iOS zoom-on-focus (triggers below 16px) */
+    input[type="text"],
+    select,
+    .config-editor {
+        font-size: 16px;
+    }
+
+    /* Stack search source above the type selector */
+    .search-options {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .search-controls {
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px;
+    }
+
+    /* Tabs share the row evenly instead of overflowing */
+    .tab {
+        flex: 1;
+        padding: 14px 0;
+        text-align: center;
+        font-size: 11px;
+    }
+
+    /* Search results: tighter, with a full-width download button below the info */
+    .search-result-item {
+        flex-wrap: wrap;
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .result-album-art {
+        width: 48px;
+        height: 48px;
+    }
+
+    .result-download-btn {
+        flex-basis: 100%;
+        padding: 12px 20px;
+    }
+
+    .search-results {
+        max-height: 60vh;
+    }
+
+    /* Download items */
+    .download-item {
+        padding: 14px;
+    }
+
+    .download-album-art {
+        width: 48px;
+        height: 48px;
+    }
+
+    .download-spinner {
+        margin-right: 0;
+    }
+
+    /* File list entries stack name over meta */
+    .file-item {
+        flex-direction: column;
+        gap: 6px;
+        padding: 12px;
+    }
+
+    .file-meta {
+        margin-left: 0;
+    }
+
+    .config-editor {
+        min-height: 300px;
+        padding: 12px;
+    }
+}
+
+/* Narrow phones */
+@media (max-width: 400px) {
+    h1 {
+        font-size: 21px;
+        letter-spacing: 3px;
+    }
+
+    .tab {
+        font-size: 10px;
+        letter-spacing: 0.5px;
     }
 }

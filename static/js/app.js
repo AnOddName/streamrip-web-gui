@@ -92,18 +92,23 @@ function handleDownloadError(data) {
     }
 }
 
+function statusLabel(status) {
+    return status === 'skipped' ? 'already downloaded' : status;
+}
+
 function renderDownloadHistory() {
     const container = document.getElementById('downloadHistory');
     if (!container) return;
-    
+
     if (downloadHistory.length === 0) {
         container.innerHTML = '<div class="empty-state">NO DOWNLOAD HISTORY</div>';
         return;
     }
-    
+
     container.innerHTML = downloadHistory.map(item => {
-        const statusIcon = item.status === 'completed' ? '✓' : '✗';
-        const statusClass = item.status === 'completed' ? 'success' : 'error';
+        const isOk = item.status === 'completed' || item.status === 'skipped';
+        const statusIcon = isOk ? '✓' : '✗';
+        const statusClass = isOk ? 'success' : 'error';
         
         return `
         <div class="download-item ${item.status}">
@@ -116,7 +121,7 @@ function renderDownloadHistory() {
                     <div class="download-title">${item.metadata?.title || 'Unknown'}</div>
                     <div class="download-artist">${item.metadata?.artist || 'Unknown Artist'}</div>
                     <div class="download-meta">
-                        <span class="status-badge ${item.status}">${item.status}</span>
+                        <span class="status-badge ${item.status}">${statusLabel(item.status)}</span>
                         ${item.metadata?.service ? 
                             `<span class="service-badge">${item.metadata.service.toUpperCase()}</span>` : ''}
                     </div>
@@ -175,7 +180,7 @@ function updateDownloadElement(id, download) {
     
     const statusBadge = element.querySelector('.status-badge');
     if (statusBadge) {
-        statusBadge.textContent = download.status;
+        statusBadge.textContent = statusLabel(download.status);
         statusBadge.className = `status-badge ${download.status}`;
     }
     
@@ -206,7 +211,7 @@ function renderActiveDownloads() {
                     <div class="download-title">${item.metadata.title || 'Unknown'}</div>
                     <div class="download-artist">${item.metadata.artist || 'Unknown Artist'}</div>
                     <div class="download-meta">
-                        <span class="status-badge ${item.status}">${item.status}</span>
+                        <span class="status-badge ${item.status}">${statusLabel(item.status)}</span>
                         ${item.metadata.service ? 
                             `<span class="service-badge">${item.metadata.service.toUpperCase()}</span>` : ''}
                     </div>
@@ -658,6 +663,12 @@ window.addEventListener('beforeunload', () => {
         eventSource.close();
     }
 });
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.log('Service worker registration failed:', err);
+    });
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     const urlInput = document.getElementById('urlInput');

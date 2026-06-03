@@ -1,0 +1,21 @@
+services:
+  streamrip:
+    build: ./
+    container_name: streamrip
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      - HOME=/config
+      - STREAMRIP_CONFIG=${CONFIG_DIR}/config.toml
+      - DOWNLOAD_DIR=${MUSIC_DIR}
+      - MAX_CONCURRENT_DOWNLOADS=${MAX_CONCURRENT_DOWNLOADS:-2}
+    volumes:
+      # Self-mounts: the host dirs appear at identical paths inside the
+      # container, so absolute paths written in config.toml (database files,
+      # folders) stay valid both on the host and in the container. This also
+      # means local runs and the container share one config and one
+      # downloads database.
+      - ${CONFIG_DIR}:${CONFIG_DIR}:rw
+      - ${MUSIC_DIR}:${MUSIC_DIR}:rw
+    ports:
+      - "${PORT:-5002}:5000"
+    restart: unless-stopped

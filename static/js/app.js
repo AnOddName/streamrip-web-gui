@@ -32,9 +32,48 @@ function initializeSSE() {
     };
 }
 
+async function loadStatus() {
+    try {
+        const response = await fetch('/api/status');
+        if (!response.ok) return;
+        const data = await response.json();
+
+        activeDownloads.clear();
+        Object.entries(data.active || {}).forEach(([id, item]) => {
+            activeDownloads.set(id, {
+                id: id,
+                metadata: item.metadata || {},
+                status: item.status || 'downloading',
+                progress: 0,
+                output: [],
+                startTime: item.started ? item.started * 1000 : Date.now()
+            });
+        });
+
+        downloadHistory = (data.history || []).slice().reverse().map(item => ({
+            id: item.id,
+            metadata: item.metadata || {},
+            status: item.status,
+            output: item.output,
+            completedAt: item.completed_at ? item.completed_at * 1000 : Date.now()
+        }));
+
+        if (currentTab === 'active') {
+            renderActiveDownloads();
+        } else if (currentTab === 'history') {
+            renderDownloadHistory();
+        }
+    } catch (error) {
+        console.error('Failed to load status:', error);
+    }
+}
+
 function handleSSEMessage(data) {
     
     switch(data.type) {
+        case 'connected':
+            loadStatus();
+            break;
         case 'download_started':
             handleDownloadStarted(data);
             break;

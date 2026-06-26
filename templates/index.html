@@ -17,24 +17,6 @@
             <p class="subtitle">WEB GUI FOR STREAMRIP</p>
         </div>
         
-        <!-- URL Download Section -->
-        <div class="section url-section">
-            <div class="section-header">
-                <h2>Download from URL</h2>
-                <div class="divider"></div>
-            </div>
-            <div class="input-group">
-                <input type="text" id="urlInput" placeholder="Paste URL here...">
-                <select id="qualitySelect">
-                    <option value="0">128kbps MP3</option>
-                    <option value="1">320kbps MP3</option>
-                    <option value="2">16-bit FLAC</option>
-                    <option value="3" selected>24-bit FLAC</option>
-                </select>
-                <button id="downloadBtn" onclick="startDownload()">DOWNLOAD</button>
-            </div>
-        </div>
-        
         <!-- Search Section -->
         <div class="section search-section">
             <div class="section-header">
@@ -77,7 +59,25 @@
                 <div class="empty-state">ENTER A SEARCH QUERY ABOVE</div>
             </div>
         </div>
-        
+
+        <!-- URL Download Section -->
+        <div class="section url-section">
+            <div class="section-header">
+                <h2>Download from URL</h2>
+                <div class="divider"></div>
+            </div>
+            <div class="input-group">
+                <input type="text" id="urlInput" placeholder="Paste URL here...">
+                <select id="qualitySelect">
+                    <option value="0">128kbps MP3</option>
+                    <option value="1">320kbps MP3</option>
+                    <option value="2">16-bit FLAC</option>
+                    <option value="3" selected>24-bit FLAC</option>
+                </select>
+                <button id="downloadBtn" onclick="startDownload()">DOWNLOAD</button>
+            </div>
+        </div>
+
         <!-- Tabs Section -->
         <div class="section tabs-section">
 		            <div class="section-header">

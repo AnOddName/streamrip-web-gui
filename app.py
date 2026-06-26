@@ -30,6 +30,7 @@ download_history = []
 sse_clients = []
 album_art_cache = {}
 cache_lock = threading.Lock()
+MAX_HISTORY = 50 
          
 class DownloadWorker(threading.Thread):
     def __init__(self):
@@ -97,17 +98,38 @@ class DownloadWorker(threading.Thread):
                             })
                 
                 process.wait()
-                
+
+                status = 'completed' if process.returncode == 0 else 'failed'
+                full_output = "\n".join(output_lines)
+
+                download_history.append({
+                    'id': task_id,
+                    'status': status,
+                    'metadata': metadata,
+                    'output': full_output,
+                    'completed_at': time.time()
+                })
+                del download_history[:-MAX_HISTORY]
+
                 broadcast_sse({
                     'type': 'download_completed',
                     'id': task_id,
-                    'status': 'completed' if process.returncode == 0 else 'failed',
+                    'status': status,
                     'metadata': metadata,
-                    'output': "\n".join(output_lines)
-
+                    'output': full_output
                 })
-                            
+
             except Exception as e:
+                download_history.append({
+                    'id': task_id,
+                    'status': 'failed',
+                    'metadata': metadata,
+                    'output': "\n".join(output_lines) if output_lines else str(e),
+                    'error': str(e),
+                    'completed_at': time.time()
+                })
+                del download_history[:-MAX_HISTORY]
+
                 broadcast_sse({
                     'type': 'download_error',
                     'id': task_id,
@@ -335,7 +357,7 @@ def search_music():
         try:
             with open(tmp_path, 'r') as f:
                 content = f.read()
-                logger.info(f"Streamrip search output: {content[:500]}")
+                logger.info(f"Streamrip search output: {content[:500]}") 
                 logger.info(f"File content length: {len(content)} characters")
                 logger.debug(f"File content (first 500 chars):\n{content[:500]}")
                 
@@ -486,8 +508,8 @@ def get_album_art():
 
     try:
         if source == 'qobuz':
-            result = fetch_single_album_art(item_id, media_type, None) 
-            album_art_cache[cache_key] = result
+            result = fetch_single_album_art(item_id, media_type, None)
+            album_art_cache[cache_key] = result 
             return jsonify({
                 'album_art': result.get('album_art', ''),
                 'tracks_count': result.get('tracks_count'),
